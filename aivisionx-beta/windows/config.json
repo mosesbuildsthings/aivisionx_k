@@ -1,0 +1,87 @@
+{
+  "version": "0.1.0-beta",
+  "app": {
+    "name": "AiVisionX",
+    "description": "AI-Powered Desktop Assistant",
+    "autoStart": true,
+    "startMinimized": true,
+    "showTrayIcon": true
+  },
+  "capture": {
+    "enabled": true,
+    "interval": 2.0,
+    "differentialThreshold": 0.05,
+    "captureRegion": null,
+    "maxCaptureHistory": 10,
+    "saveCapturesLocally": false
+  },
+  "privacy": {
+    "enableRedaction": true,
+    "redactionPatterns": [
+      "\\b\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}\\b",
+      "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b",
+      "\\b(?:password|passwd|pwd)\\s*[=:]\\s*\\S+",
+      "sk-[a-zA-Z0-9]{48}",
+      "ghp_[a-zA-Z0-9]{36}",
+      "\\b\\d{3}-\\d{2}-\\d{4}\\b"
+    ],
+    "sensitiveApps": [
+      "1Password",
+      "Bitwarden",
+      "KeePass",
+      "KeePassXC",
+      "LastPass",
+      "Dashlane",
+      "NordPass",
+      "RoboForm"
+    ],
+    "neverCaptureApps": [
+      "1Password",
+      "KeePassXC"
+    ]
+  },
+  "ai": {
+    "provider": "gemini",
+    "model": "gemini-pro-vision",
+    "apiKey": "",
+    "maxContextHistory": 10,
+    "requestTimeout": 30,
+    "enableOfflineMode": true,
+    "rateLimit": {
+      "maxRequestsPerMinute": 30,
+      "maxRequestsPerHour": 500
+    }
+  },
+  "overlay": {
+    "enabled": true,
+    "opacity": 0.95,
+    "position": "bottom-right",
+    "animationEnabled": true,
+    "autoHideDelay": 10,
+    "keyboardShortcut": "Ctrl+Space",
+    "suggestionsCount": 5
+  },
+  "communication": {
+    "protocol": "https",
+    "apiEndpoint": "https://api.aivisionx.io/v1",
+    "websocketEndpoint": "wss://ws.aivisionx.io/v1",
+    "tlsVersion": "1.3",
+    "certificatePinning": true
+  },
+  "logging": {
+    "level": "info",
+    "maxLogFiles": 5,
+    "maxLogSizeMB": 10,
+    "includePii": false
+  },
+  "updates": {
+    "checkAutomatically": true,
+    "channel": "beta",
+    "checkIntervalHours": 24
+  },
+  "beta": {
+    "feedbackEnabled": true,
+    "analyticsEnabled": true,
+    "experimentalFeatures": false
+  }
+}

@@ -1,0 +1,162 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 228 43% 3%;
+    --foreground: 230 60% 97%;
+    --card: 228 35% 6%;
+    --card-foreground: 230 60% 97%;
+    --popover: 228 35% 6%;
+    --popover-foreground: 230 60% 97%;
+    --primary: 243 75% 59%;
+    --primary-foreground: 230 60% 97%;
+    --secondary: 228 25% 12%;
+    --secondary-foreground: 230 60% 97%;
+    --muted: 228 25% 12%;
+    --muted-foreground: 227 15% 70%;
+    --accent: 243 75% 59%;
+    --accent-foreground: 230 60% 97%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 230 30% 12%;
+    --input: 228 25% 12%;
+    --ring: 243 75% 59%;
+    --radius: 1.125rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  html {
+    scroll-behavior: auto;
+  }
+  
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', sans-serif;
+    overflow-x: hidden;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', sans-serif;
+    letter-spacing: -0.02em;
+    line-height: 0.95;
+  }
+}
+
+@layer components {
+  .font-mono-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  
+  .glass-card {
+    @apply rounded-[28px] border border-white/[0.08];
+    background: rgba(11, 14, 30, 0.6);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 28px 90px rgba(0, 0, 0, 0.55);
+  }
+  
+  .glass-card-sm {
+    @apply rounded-[18px] border border-white/[0.08];
+    background: rgba(11, 14, 30, 0.5);
+    backdrop-filter: blur(16px);
+    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.4);
+  }
+  
+  .glow-indigo {
+    background: radial-gradient(circle at 50% 0, rgba(79, 70, 229, 0.28), transparent 55%);
+  }
+  
+  .vignette {
+    background: radial-gradient(circle at 50% 40%, transparent 30%, rgba(5, 6, 11, 0.85) 70%);
+  }
+  
+  .text-gradient {
+    background: linear-gradient(135deg, #F4F6FF 0%, #A7ACBF 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .section-pinned {
+    @apply relative w-screen h-screen overflow-hidden;
+    will-change: transform;
+  }
+  
+  .grain-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.04;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  }
+}
+
+@layer utilities {
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+  
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #05060B;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4F46E5;
+  border-radius: 3px;
+}
+
+/* Pulse animation for connector dot */
+@keyframes pulse-dot {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 0.7;
+  }
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 2.2s ease-in-out infinite;
+}
+
+/* Smooth transitions for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
