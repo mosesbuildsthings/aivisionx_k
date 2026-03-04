@@ -13,7 +13,7 @@ Usage:
 
 Requirements:
     pip install -r requirements.txt
-    pip install openai
+    pip install google-genai
     pip install python-dotenv
 """
 
@@ -21,36 +21,25 @@ import os
 import sys
 import time
 import json
-import base64
 import hashlib
 import threading
-import io
 from datetime import datetime
-from typing import Optional, Dict, List, Tuple, Callable
-from dataclasses import dataclass, asdict
-from pathlib import Path
+from typing import Optional, Dict, List, Tuple
+from dataclasses import dataclass
 
 import cv2
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter
 import mss
 from dotenv import load_dotenv
 
-# Kimi/Moonshot uses the standard OpenAI SDK format
+# New Google GenAI SDK integration
 try:
-    from openai import OpenAI
-    KIMI_AVAILABLE = True
+    from google import genai
+    GEMINI_AVAILABLE = True
 except ImportError:
-    KIMI_AVAILABLE = False
-    print("Warning: openai package not installed. AI features disabled.")
-
-try:
-    from pynput import mouse, keyboard
-    INPUT_AVAILABLE = True
-except ImportError:
-    INPUT_AVAILABLE = False
-    print("Warning: pynput not installed. Input monitoring disabled.")
-
+    GEMINI_AVAILABLE = False
+    print("Warning: google-genai package not installed. AI features disabled.")
 
 # =============================================================================
 # CONFIGURATION
@@ -69,9 +58,9 @@ class AiVisionXConfig:
     redaction_patterns: List[str] = None
     sensitive_apps: List[str] = None
     
-    # AI (Secured: Key removed)
-    kimi_api_key: Optional[str] = None
-    ai_model: str = "moonshot-v1-auto" 
+    # AI (Secured: Key loads dynamically)
+    gemini_api_key: Optional[str] = None
+    ai_model: str = "gemini-3.1-pro" 
     max_context_history: int = 10
     
     # Overlay
@@ -120,12 +109,14 @@ class ScreenCapture:
     def capture(self) -> Optional[Image.Image]:
         region = self.get_screen_region()
         
+        # Thread-safe GDI context
         with mss.mss() as sct:
             screenshot = sct.grab(region)
             
         img = Image.frombytes("RGB", screenshot.size, screenshot.bgra, "raw", "BGRX")
         img_array = np.array(img)
         
+        # Differential capture logic
         if self.last_capture is not None:
             diff_ratio = self._calculate_difference(img_array, self.last_capture)
             if diff_ratio < self.config.differential_threshold:
@@ -181,6 +172,7 @@ class PrivacyFirewall:
         
         for contour in contours:
             x, y, w, h = cv2.boundingRect(contour)
+            # Filter layout blocks to prevent full-screen blurring
             if w < 50 or h < 15 or w > 600 or h > 100:
                 continue
             
@@ -225,7 +217,7 @@ class PrivacyFirewall:
 
 
 # =============================================================================
-# AI ENGINE MODULE 
+# AI ENGINE MODULE (Gemini API Integration)
 # =============================================================================
 
 class AIEngine:
@@ -234,11 +226,9 @@ class AIEngine:
         self.context_history: List[Dict] = []
         self.request_count = 0
         
-        if KIMI_AVAILABLE and config.kimi_api_key:
-            self.client = OpenAI(
-                api_key=config.kimi_api_key,
-                base_url="https://api.moonshot.ai/v1",
-            )
+        if GEMINI_AVAILABLE and config.gemini_api_key:
+            # Safely pass the API key to the new Google GenAI SDK client
+            self.client = genai.Client(api_key=config.gemini_api_key)
             self.model = config.ai_model
         else:
             self.client = None
@@ -249,36 +239,16 @@ class AIEngine:
             return self._mock_analysis(image, user_query)
         
         try:
-            # Convert image to base64 string for API transmission
-            img_bytes = io.BytesIO()
-            image.save(img_bytes, format='PNG')
-            base64_image = base64.b64encode(img_bytes.getvalue()).decode('utf-8')
+            prompt_text = self._build_analysis_prompt(user_query)
             
-            prompt = self._build_analysis_prompt(user_query)
-            
-            # Send payload to Kimi API
-            response = self.client.chat.completions.create(
+            # Gemini natively processes the raw PIL.Image object without manual encoding
+            response = self.client.models.generate_content(
                 model=self.model,
-                messages=[
-                    {"role": "system", "content": "You are AiVisionX, an AI-powered desktop assistant."},
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": prompt},
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/png;base64,{base64_image}"
-                                }
-                            }
-                        ]
-                    }
-                ],
-                temperature=0.6,
+                contents=[prompt_text, image]
             )
             
             self.request_count += 1
-            analysis_text = response.choices[0].message.content
+            analysis_text = response.text
             
             result = {
                 "timestamp": datetime.now().isoformat(),
@@ -490,8 +460,7 @@ class AiVisionXAgent:
     def _analyze_screen(self):
         print("[AI] Analyzing screen...")
         
-        # We temporarily set last_capture to None to bypass the differential check
-        # exactly like we did for the manual force capture, ensuring it always triggers.
+        # Bypass differential check on manual trigger
         self.screen_capture.last_capture = None 
         
         image = self.screen_capture.capture()
@@ -502,7 +471,11 @@ class AiVisionXAgent:
         redacted_image, _ = self.privacy_firewall.redact_image(image)
         result = self.ai_engine.analyze_screen(redacted_image)
         
-        print(f"\n[ANALYSIS] {result.get('analysis', 'No analysis available')}")
+        if "error" in result:
+            print(f"\n[API ERROR] {result['error']}")
+        else:
+            print(f"\n[ANALYSIS] {result.get('analysis', 'No analysis available')}")
+        
         if 'suggestions' in result:
             self.overlay.show(result['suggestions'])
         if result.get('mock'):
@@ -512,13 +485,19 @@ class AiVisionXAgent:
         print(f"[YOU] {query}")
         self.overlay.add_chat_message("user", query)
         
+        # Bypass differential check on manual trigger
         self.screen_capture.last_capture = None 
         image = self.screen_capture.capture()
         
         if image:
             redacted_image, _ = self.privacy_firewall.redact_image(image)
             result = self.ai_engine.analyze_screen(redacted_image, query)
-            response = result.get('analysis', 'No response')
+            
+            if "error" in result:
+                response = f"API ERROR: {result['error']}"
+            else:
+                response = result.get('analysis', 'No response')
+                
             print(f"[AI] {response}")
             self.overlay.add_chat_message("assistant", response)
     
@@ -539,11 +518,11 @@ def main():
     
     config = AiVisionXConfig()
     
-    # Securely grab the key from the environment
-    config.kimi_api_key = os.getenv("MOONSHOT_API_KEY")
+    # Securely pull the key from the environment
+    config.gemini_api_key = os.getenv("GEMINI_API_KEY")
         
-    if not config.kimi_api_key:
-        print("[WARNING] MOONSHOT_API_KEY not set in .env file. Using mock mode.")
+    if not config.gemini_api_key:
+        print("[WARNING] GEMINI_API_KEY not set in .env file. Using mock mode.")
     
     agent = AiVisionXAgent(config)
     try:
